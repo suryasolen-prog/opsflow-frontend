@@ -67,6 +67,8 @@ function App() {
   const [notice, setNotice] = useState('')
 
   const [showProjectForm, setShowProjectForm] = useState(false)
+  const [projectSubmitting, setProjectSubmitting] = useState(false)
+  const projectSubmitLock = useRef(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
 
   const [projectName, setProjectName] = useState('')
@@ -363,6 +365,11 @@ function App() {
   const createProject = async event => {
     event.preventDefault()
 
+    // Prevent rapid repeated submissions before React can re-render.
+    if (projectSubmitLock.current) return
+    projectSubmitLock.current = true
+    setProjectSubmitting(true)
+
     setError('')
     setNotice('')
 
@@ -383,6 +390,9 @@ function App() {
       await loadProjects()
     } catch (err) {
       setError(err.message || 'Unable to create project.')
+    } finally {
+      projectSubmitLock.current = false
+      setProjectSubmitting(false)
     }
   }
 
@@ -866,8 +876,12 @@ function App() {
                 />
 
                 <div className="form-actions">
-                  <button className="primary-button">
-                    Create project
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={projectSubmitting}
+                  >
+                    {projectSubmitting ? 'Creating project...' : 'Create project'}
                   </button>
                 </div>
               </form>
