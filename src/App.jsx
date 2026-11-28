@@ -68,6 +68,7 @@ function App() {
 
   const [showProjectForm, setShowProjectForm] = useState(false)
   const [projectSubmitting, setProjectSubmitting] = useState(false)
+  const [duplicateCleanupRunning, setDuplicateCleanupRunning] = useState(false)
   const projectSubmitLock = useRef(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
 
@@ -393,6 +394,30 @@ function App() {
     } finally {
       projectSubmitLock.current = false
       setProjectSubmitting(false)
+    }
+  }
+
+  const cleanupDuplicateProjects = async () => {
+    const confirmed = window.confirm(
+      'Remove only the extra copies of “OpsFlow Website Development”? One original project will be kept. If any duplicate has tasks or members, nothing will be deleted.'
+    )
+    if (!confirmed || duplicateCleanupRunning) return
+
+    setDuplicateCleanupRunning(true)
+    setError('')
+    setNotice('')
+
+    try {
+      const result = await apiRequest(
+        '/api/projects/admin/cleanup-opsflow-duplicates',
+        { method: 'POST' }
+      )
+      setNotice(result?.message || 'Duplicate cleanup completed.')
+      await loadProjects()
+    } catch (err) {
+      setError(err.message || 'Unable to clean up duplicate projects.')
+    } finally {
+      setDuplicateCleanupRunning(false)
     }
   }
 
@@ -840,12 +865,23 @@ function App() {
                 <h2>Projects</h2>
               </div>
 
-              <button
-                className="primary-button"
-                onClick={() => setShowProjectForm(value => !value)}
-              >
-                {showProjectForm ? 'Cancel' : '+ New project'}
-              </button>
+              <div className="section-actions">
+                {isAdmin && (
+                  <button
+                    className="danger-button"
+                    onClick={cleanupDuplicateProjects}
+                    disabled={duplicateCleanupRunning}
+                  >
+                    {duplicateCleanupRunning ? 'Cleaning duplicates...' : 'Remove duplicate projects'}
+                  </button>
+                )}
+                <button
+                  className="primary-button"
+                  onClick={() => setShowProjectForm(value => !value)}
+                >
+                  {showProjectForm ? 'Cancel' : '+ New project'}
+                </button>
+              </div>
             </div>
 
             {showProjectForm && (
